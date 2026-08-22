@@ -1,8 +1,4 @@
 // Скопировать этот файл в: credentials.h и заменить примеры кредов на свои.
-
-#ifndef CREDENTIALS_H
-#define CREDENTIALS_H
-
 struct Credential {
   const char* name;
   const char* login;
@@ -16,8 +12,7 @@ Credential credentials[] = {
   {"Login4", "your_login_4", "your_pass_4"},
   {"Login5", "your_login_5", "your_pass_5"},
   // ...
+  // до 12 кредов вполне удобно читаются.
 };
 
 #define NUMITEMS(arg) ((unsigned int) (sizeof (arg) / sizeof (arg [0])))
-
-#endif // CREDENTIALS_H
