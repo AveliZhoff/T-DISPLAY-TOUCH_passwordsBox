@@ -1,10 +1,16 @@
-// Скопировать этот файл в: credentials.h и заменить примеры кредов на свои.
+// Скопировать этот файл в: credentials.h и заменить примеры пин-кода и кредов на свои.
+
+// Пин-код для разблокировки устройства при запуске
+#define PIN_CODE "12345678"
+
+// Структура для хранения учётных данных
 struct Credential {
   const char* name;
   const char* login;
   const char* pass;
 };
 
+// Твои креды здесь
 Credential credentials[] = {
   {"Login1", "your_login_1", "your_pass_1"},
   {"Login2", "your_login_2", "your_pass_2"},

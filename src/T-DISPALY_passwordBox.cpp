@@ -1,5 +1,11 @@
 // ==================== выбор включения мыши ====================
+// закомментируйте строку ниже, чтобы отключить активность мыши (противодействие блокировке экрана)
 // #define ENABLE_MOUSE
+// ====================================================================
+
+// ==================== выбор включения пин-кода ====================
+// закомментируйте строку ниже, чтобы отключить запрос пин-кода
+#define ENABLE_PIN_CODE
 // ====================================================================
 
 // Credential
@@ -55,6 +61,45 @@ byte shift = 5;
 // Delays
 byte delayBtwnChar = 20;
 byte delayBtwnAfterTab = 200;
+
+#ifdef ENABLE_PIN_CODE
+// ==== Экран блокировки (ввод пин-кода) ====
+bool deviceUnlocked = false;         // устройство разблокировано?
+String pinInput = "";                // введённый пин
+
+// Поле ввода пин-кода
+#define PIN_FIELD_X 5
+#define PIN_FIELD_Y 5
+#define PIN_FIELD_W 160
+#define PIN_FIELD_H 45
+
+// Максимум цифр в поле ввода – сколько помещается визуально
+// (шрифт textSize 3: 18 px на цифру, отступы по 7 px с краёв)
+const byte pinMaxLength = (PIN_FIELD_W - 14) / 18;
+
+// Клавиши цифровой клавиатуры
+struct PinKey {
+  const char* label;
+  byte x;
+  byte y;
+  byte w;
+  byte h;
+};
+
+const PinKey pinKeys[] = {
+  {"1",    5,  96, 50, 40},
+  {"2",   60,  96, 50, 40},
+  {"3",  115,  96, 50, 40},
+  {"4",    5, 142, 50, 40},
+  {"5",   60, 142, 50, 40},
+  {"6",  115, 142, 50, 40},
+  {"7",    5, 188, 50, 40},
+  {"8",   60, 188, 50, 40},
+  {"9",  115, 188, 50, 40},
+  {"0",    5, 234, 50, 40},
+  {"Enter", 60, 234, 105, 40}
+};
+#endif // ENABLE_PIN_CODE
 
 
 /////////////////////////////////////////////////////////////////
@@ -126,7 +171,102 @@ void longClick(Button2& btn) {
   }
 }
 
-/////////////////////////////////////////////////////////////////
+#ifdef ENABLE_PIN_CODE
+//// ==== Функции экрана блокировки (ввод пин-кода) ====
+
+// Перерисовка поля ввода пин-кода
+void drawPinField() {
+  tft.fillRect(PIN_FIELD_X + 1, PIN_FIELD_Y + 1, PIN_FIELD_W - 2, PIN_FIELD_H - 2, TFT_NAVY);
+  tft.drawRect(PIN_FIELD_X, PIN_FIELD_Y, PIN_FIELD_W, PIN_FIELD_H, TFT_SKYBLUE);
+
+  // Введённые цифры
+  tft.setTextColor(TFT_WHITE, TFT_NAVY); tft.setTextSize(3);
+  tft.setCursor(PIN_FIELD_X + 7, PIN_FIELD_Y + 10);
+  tft.print(pinInput);
+
+  // Курсор (подчёркивание) перед следующей цифрой
+  if (pinInput.length() < pinMaxLength) {
+    int cursorX = PIN_FIELD_X + 7 + pinInput.length() * 18;
+    tft.fillRect(cursorX, PIN_FIELD_Y + 32, 16, 5, TFT_WHITE);
+  }
+}
+
+// Отрисовка одной клавиши клавиатуры
+void drawPinKey(byte index, bool pressed) {
+  uint16_t fill   = pressed ? TFT_WHITE    : TFT_DARKGREY;
+  uint16_t border = pressed ? TFT_SKYBLUE  : TFT_WHITE;
+  uint16_t text   = pressed ? TFT_BLACK    : TFT_WHITE;
+
+  tft.fillRoundRect(pinKeys[index].x, pinKeys[index].y, pinKeys[index].w, pinKeys[index].h, 6, fill);
+  tft.drawRoundRect(pinKeys[index].x, pinKeys[index].y, pinKeys[index].w, pinKeys[index].h, 6, border);
+
+  if (strcmp(pinKeys[index].label, "Enter") == 0) {
+    tft.setTextColor(text, fill); tft.setTextSize(2);
+    tft.setCursor(pinKeys[index].x + 22, pinKeys[index].y + 12);
+    tft.print("Enter");
+  } else {
+    tft.setTextColor(text, fill); tft.setTextSize(3);
+    tft.setCursor(pinKeys[index].x + 16, pinKeys[index].y + 8);
+    tft.print(pinKeys[index].label);
+  }
+}
+
+// Полная отрисовка экрана ввода пин-кода
+void drawPinScreen() {
+  tft.fillScreen(TFT_BLACK);
+  drawPinField();
+  for (byte i = 0; i < NUMITEMS(pinKeys); i++) {
+    drawPinKey(i, false);
+  }
+}
+
+// Прототип: основной экран со списком аккаунтов (рисуется после разблокировки)
+void drawListScreen();
+
+// Обработка касания на экране пин-кода.
+// getLastTouchPosition(y, x) подставляем так же, как в основном цикле:
+// первый параметр – вертикаль экрана, второй – горизонталь.
+void handlePinTouch(int y, int x) {
+  for (byte i = 0; i < NUMITEMS(pinKeys); i++) {
+    if ((x >= pinKeys[i].x) && (x <= pinKeys[i].x + pinKeys[i].w) &&
+        (y >= pinKeys[i].y) && (y <= pinKeys[i].y + pinKeys[i].h)) {
+
+      // Клавиша Enter – проверяем пин
+      if (strcmp(pinKeys[i].label, "Enter") == 0) {
+        if (pinInput == PIN_CODE) {
+          deviceUnlocked = true;
+          drawListScreen();
+        } else {
+          // Неверный пин – очищаем поле ввода и начинаем заново
+          pinInput = "";
+          drawPinField();
+        }
+      } else {
+        // Цифровая клавиша – добавляем цифру в поле ввода
+        if (pinInput.length() < pinMaxLength) {
+          pinInput += pinKeys[i].label;
+          drawPinField();
+        }
+      }
+      break;
+    }
+  }
+}
+
+// Вывод основного экрана со списком аккаунтов (после разблокировки)
+void drawListScreen() {
+  tft.fillScreen(TFT_BLACK);
+  tft.drawRect(0, 0, max_x, max_y, TFT_BLUE);
+
+  tft.setTextColor(TFT_DARKGREY, TFT_BLACK); tft.setTextSize(3);
+  for (int i = 0; i < NUMITEMS(credentials); i++) {
+    tft.setCursor(10, shift + lenHigh * i);
+    tft.print(credentials[i].name);
+  }
+}
+#endif // ENABLE_PIN_CODE
+
+//////////////////////////////////////////////////////////////
 void setup() {
   // Button
   buttonRight.begin(BUTTON_PIN_UP);
@@ -164,11 +304,17 @@ void setup() {
     tft.drawRect(0, 0, max_x, max_y, TFT_BLUE);
   }
 
+  #ifdef ENABLE_PIN_CODE
+  // Экран ввода пин-кода при каждом запуске/перезагрузке
+  drawPinScreen();
+#else
   // Вывод списка имён
   tft.setTextColor(TFT_DARKGREY, TFT_BLACK); tft.setTextSize(3);
   for (int i = 0; i < NUMITEMS(credentials) ; i++){
     tft.setCursor (10, shift + lenHigh * i); tft.print(credentials[i].name);
   }
+#endif // ENABLE_PIN_CODE
+  timeStamp = millis();
 
   Keyboard.begin();
 #ifdef ENABLE_MOUSE
@@ -180,10 +326,33 @@ void setup() {
 
 /////////////////////////////////////////////////////////////////
 void loop() {
+  oTouch.control();
+
+  #ifdef ENABLE_PIN_CODE
+  // === Экран блокировки (ввод пин-кода) ===
+  if (!deviceUnlocked) {
+    if (oTouch.hadTouch()) {
+      backlight = 1;
+      digitalWrite(displayPort, backlight);
+      timeStamp = millis();
+
+      int x;
+      int y;
+      oTouch.getLastTouchPosition(y, x);
+      handlePinTouch(y, x);
+    }
+
+    // Подсветка гаснет после простоя
+    if (millis() > timeStamp + backlightInterval) {
+      backlight = 0;
+      digitalWrite(displayPort, backlight);
+    }
+    return;
+  }
+#endif // ENABLE_PIN_CODE
+
   buttonRight.loop();
   buttonLeft.loop();
-
-  oTouch.control();
 	
   if (oTouch.hadTouch()) {
     backlight = 1;
