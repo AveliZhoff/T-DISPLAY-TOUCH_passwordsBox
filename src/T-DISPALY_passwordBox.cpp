@@ -13,8 +13,8 @@
 
 // Button
 #include "Button2.h"
-#define BUTTON_PIN_UP 0
-#define BUTTON_PIN_DOWN 14
+#define BUTTON_PIN_RIGHT 14
+#define BUTTON_PIN_LEFT 0
 Button2 buttonRight, buttonLeft;
 
 // Touch
@@ -134,7 +134,7 @@ void click(Button2& btn) {
   timeStamp = millis();
 
   // Если нажата buttonRight и логин не равен "nologin" – отправляем логин
-  if (btn == buttonRight && strcmp(credentials[touchPositionLast].login, "nologin") != 0) {
+  if (btn == buttonLeft && strcmp(credentials[touchPositionLast].login, "nologin") != 0) {
     str = credentials[touchPositionLast].login;
     str.toCharArray(charBuf, 50);
     for (int i = 0; i < str.length(); i++){
@@ -156,11 +156,27 @@ void click(Button2& btn) {
   Keyboard.write(KEY_RETURN);
 }
 
-// Обработчик долгого нажатия – отправляет только логин 
+// Обработчик долгого нажатия:
+//   правая кнопка – вводит только пароль,
+//   левая кнопка  – вводит только логин
 void longClick(Button2& btn) {
   if (backlight == 0) return;
   timeStamp = millis();
-    if (strcmp(credentials[touchPositionLast].login, "nologin") != 0) {
+
+  // Правая кнопка – только пароль
+  if (btn == buttonRight) {
+    str = credentials[touchPositionLast].pass;
+    str.toCharArray(charBuf, 50);
+    for (int i = 0; i < str.length(); i++){
+      Serial.print("Sending Password: "); Serial.println(charBuf[i]);
+      Keyboard.print(charBuf[i]);
+      delay(delayBtwnChar);
+    }
+    return;
+  }
+
+  // Левая кнопка – только логин (если он задан)
+  if (strcmp(credentials[touchPositionLast].login, "nologin") != 0) {
     str = credentials[touchPositionLast].login;
     str.toCharArray(charBuf, 50);
     for (int i = 0; i < str.length(); i++){
@@ -269,8 +285,8 @@ void drawListScreen() {
 //////////////////////////////////////////////////////////////
 void setup() {
   // Button
-  buttonRight.begin(BUTTON_PIN_UP);
-  buttonLeft.begin(BUTTON_PIN_DOWN);
+  buttonRight.begin(BUTTON_PIN_RIGHT);
+  buttonLeft.begin(BUTTON_PIN_LEFT);
   buttonRight.setClickHandler(click);
   buttonLeft.setClickHandler(click);
   buttonRight.setLongClickHandler(longClick);
@@ -304,7 +320,14 @@ void setup() {
     tft.drawRect(0, 0, max_x, max_y, TFT_BLUE);
   }
 
-  #ifdef ENABLE_PIN_CODE
+  Keyboard.begin();
+#ifdef ENABLE_MOUSE
+  Mouse.begin();
+#endif
+
+  USB.begin();
+
+#ifdef ENABLE_PIN_CODE
   // Экран ввода пин-кода при каждом запуске/перезагрузке
   drawPinScreen();
 #else
@@ -315,20 +338,13 @@ void setup() {
   }
 #endif // ENABLE_PIN_CODE
   timeStamp = millis();
-
-  Keyboard.begin();
-#ifdef ENABLE_MOUSE
-  Mouse.begin();
-#endif
-
-  USB.begin();
 }
 
 /////////////////////////////////////////////////////////////////
 void loop() {
   oTouch.control();
 
-  #ifdef ENABLE_PIN_CODE
+#ifdef ENABLE_PIN_CODE
   // === Экран блокировки (ввод пин-кода) ===
   if (!deviceUnlocked) {
     if (oTouch.hadTouch()) {
