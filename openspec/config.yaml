@@ -1,0 +1,41 @@
+schema: spec-driven
+
+context: |
+  Language: Russian
+  All artifacts must be written in Russian.
+  Keep OpenSpec structural headings and SHALL/MUST keywords in English.
+  Project: T-Display PasswordsBox, a portable credential-entry device for
+  LilyGo T-Display S3 (ESP32-S3) running Arduino on PlatformIO.
+  Main implementation: src/T-DISPALY_passwordBox.cpp.
+  Credential data and the PIN are supplied locally through
+  src/credentials.h, which is ignored by Git; use
+  src/credentials.example.h as the non-secret template.
+  Hardware: 170x320 TFT display, CST816 capacitive touch sensor, two physical
+  buttons, and USB HID keyboard (optional HID mouse).
+  Keep changes compatible with the existing PlatformIO environment and
+  dependencies in platformio.ini. Do not add real credentials or PINs to
+  tracked files.
+githubCopilot:
+  cloudAgent: false
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always state what is out of scope
+#     tasks:
+#       - Break tasks into chunks of max 2 hours
+
+# Per-operation guidance (optional)
+# Add advisory guidance for how apply and archive work should be conducted.
+# This is separate from artifact rules above.
+# Example:
+#   operations:
+#     apply:
+#       guidance:
+#         - Keep test summaries concise
+#     archive:
+#       guidance:
+#         - Summarize the archive outcome before finishing

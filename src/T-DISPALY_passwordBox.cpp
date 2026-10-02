@@ -5,7 +5,7 @@
 
 // ==================== выбор включения пин-кода ====================
 // закомментируйте строку ниже, чтобы отключить запрос пин-кода
-// #define ENABLE_PIN_CODE
+#define ENABLE_PIN_CODE
 // ====================================================================
 
 // Credential
@@ -80,24 +80,25 @@ const byte pinMaxLength = (PIN_FIELD_W - 14) / 18;
 // Клавиши цифровой клавиатуры
 struct PinKey {
   const char* label;
-  byte x;
-  byte y;
-  byte w;
-  byte h;
+  uint16_t x;
+  uint16_t y;
+  uint16_t w;
+  uint16_t h;
 };
 
 const PinKey pinKeys[] = {
-  {"1",    5,  96, 50, 40},
-  {"2",   60,  96, 50, 40},
-  {"3",  115,  96, 50, 40},
-  {"4",    5, 142, 50, 40},
-  {"5",   60, 142, 50, 40},
-  {"6",  115, 142, 50, 40},
-  {"7",    5, 188, 50, 40},
-  {"8",   60, 188, 50, 40},
-  {"9",  115, 188, 50, 40},
-  {"0",    5, 234, 50, 40},
-  {"Enter", 60, 234, 105, 40}
+  {"1",    5,  71, 50, 40},
+  {"2",   60,  71, 50, 40},
+  {"3",  115,  71, 50, 40},
+  {"4",    5, 117, 50, 40},
+  {"5",   60, 117, 50, 40},
+  {"6",  115, 117, 50, 40},
+  {"7",    5, 163, 50, 40},
+  {"8",   60, 163, 50, 40},
+  {"9",  115, 163, 50, 40},
+  {"0",    5, 209, 50, 40},
+  {"Enter", 60, 209, 105, 40},
+  {"Clear",  5, 270, 160, 45}
 };
 #endif // ENABLE_PIN_CODE
 
@@ -220,6 +221,10 @@ void drawPinKey(byte index, bool pressed) {
     tft.setTextColor(text, fill); tft.setTextSize(2);
     tft.setCursor(pinKeys[index].x + 22, pinKeys[index].y + 12);
     tft.print("Enter");
+  } else if (strcmp(pinKeys[index].label, "Clear") == 0) {
+    tft.setTextColor(text, fill); tft.setTextSize(2);
+    tft.setCursor(pinKeys[index].x + 50, pinKeys[index].y + 14);
+    tft.print("Clear");
   } else {
     tft.setTextColor(text, fill); tft.setTextSize(3);
     tft.setCursor(pinKeys[index].x + 16, pinKeys[index].y + 8);
@@ -247,8 +252,12 @@ void handlePinTouch(int y, int x) {
     if ((x >= pinKeys[i].x) && (x <= pinKeys[i].x + pinKeys[i].w) &&
         (y >= pinKeys[i].y) && (y <= pinKeys[i].y + pinKeys[i].h)) {
 
+      // Кнопка Clear очищает введённый пин без проверки
+      if (strcmp(pinKeys[i].label, "Clear") == 0) {
+        pinInput = "";
+        drawPinField();
       // Клавиша Enter – проверяем пин
-      if (strcmp(pinKeys[i].label, "Enter") == 0) {
+      } else if (strcmp(pinKeys[i].label, "Enter") == 0) {
         if (pinInput == PIN_CODE) {
           deviceUnlocked = true;
           drawListScreen();
@@ -348,14 +357,18 @@ void loop() {
   // === Экран блокировки (ввод пин-кода) ===
   if (!deviceUnlocked) {
     if (oTouch.hadTouch()) {
+      bool wasBacklightOn = backlight;
+      int x;
+      int y;
+      oTouch.getLastTouchPosition(y, x);
+
       backlight = 1;
       digitalWrite(displayPort, backlight);
       timeStamp = millis();
 
-      int x;
-      int y;
-      oTouch.getLastTouchPosition(y, x);
-      handlePinTouch(y, x);
+      if (wasBacklightOn) {
+        handlePinTouch(y, x);
+      }
     }
 
     // Подсветка гаснет после простоя
