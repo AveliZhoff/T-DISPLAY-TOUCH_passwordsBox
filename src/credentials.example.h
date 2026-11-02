@@ -10,7 +10,7 @@ struct Credential {
   const char* pass;
 };
 
-// Твои креды здесь
+// Сгенерить новый пароль: pwgen -cny 12
 Credential credentials[] = {
   {"Login1", "your_login_1", "your_pass_1"},
   {"Login2", "your_login_2", "your_pass_2"},
