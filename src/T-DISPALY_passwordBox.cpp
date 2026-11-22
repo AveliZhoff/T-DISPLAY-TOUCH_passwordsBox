@@ -134,7 +134,8 @@ void click(Button2& btn) {
   if ( backlight == 0 ) return;
   timeStamp = millis();
 
-  // Если нажата buttonRight и логин не равен "nologin" – отправляем логин
+  // Логин и TAB отправляем только по короткому нажатию левой кнопки
+  // и только если логин не равен "nologin"
   if (btn == buttonLeft && strcmp(credentials[touchPositionLast].login, "nologin") != 0) {
     str = credentials[touchPositionLast].login;
     str.toCharArray(charBuf, 50);
